@@ -1,0 +1,80 @@
+ids are uuid
+created_at & updated_at dates in all tables
+media_files table is actually for storing all media_files. Nullable media means it's just a file not associated with any record.
+product can be in multiple collections or sub collections.
+
+users
+    id
+    name
+    username
+    email
+    is_admin
+    is_active
+    is_banned
+    ip_address
+    last_login
+    verified_at
+stores
+    id
+    title
+    slug
+    custom_domain
+    domain_verification_token
+    domain_verified_at (nullable)
+store_members
+    id
+    store_id
+    user_id
+    is_owner (bool, default: false)
+    is_worker (bool, default: false)
+store_member_permissions
+    id
+    store_members_id
+    resource [enum: product, blog, page, contact]
+    view (bool, default: false)
+    create (bool, default: false)
+    delete (bool, default: false)
+    update (bool, default: false)
+collections
+    id
+    title
+    slug
+    is_active
+    is_featured
+sub_collections
+    id
+    collection_id
+    title
+    slug
+    is_active
+    is_featured
+products
+    id
+    title
+    slug
+    description
+    sort_order (default: 1)
+    is_active (bool, default: true)
+    is_featured (bool, default: false)
+product_specifications
+    id
+    title
+    value
+    description (nullable)
+    is_active (bool, default: true)
+media_files
+    id
+    store_id
+    product_id (nullable)
+    collection_id (nullable)
+    sub_collection_id (nullable)
+    is_primary (bool)
+    sort_order (default: 1)
+    file_path
+payment_methods
+    id
+    name
+    is_active
+store_payment_methods
+    id
+    title
