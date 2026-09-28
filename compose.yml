@@ -1,0 +1,12 @@
+services:
+  db_webedit99:
+    image: postgres:latest
+    restart: always
+    environment:
+      POSTGRES_DB: webedit99_db
+      POSTGRES_USER: webedit99
+      POSTGRES_PASSWORD: 'mypassword123'
+    ports:
+      - 127.0.0.1:5467:5432
+    volumes:
+      - ./db_webedit99:/var/lib/postgresql
