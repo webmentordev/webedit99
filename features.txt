@@ -1,80 +1,517 @@
-ids are uuid
-created_at & updated_at dates in all tables
-media_files table is actually for storing all media_files. Nullable media means it's just a file not associated with any record.
-product can be in multiple collections or sub collections.
+GLOBAL RULES
+ids are uuid (v7 preferred)
+created_at & updated_at in all tables
+deleted_at (soft delete) on: products, customers, coupons, brands, collections, pages
+All is_featured must be boolean, default false
+All is_active must be boolean, default true
+All sort_order must be integer, default 1
+Money = integer in minor units (e.g. cents), never float
+Table names are plural
+Every foreign key is indexed
+Every store-owned table has store_id, and slugs/codes are unique per store
+media_files is the single table for all files. Nullable relations = a file not tied to any record
+A product can be in multiple collections or sub-collections (via product_collections)
+values in [] are enums
 
-users
+users (store owners/admins)
     id
     name
-    username
-    email
+    username (unique)
+    email (unique)
+    password_hash
     is_admin
     is_active
     is_banned
     ip_address
     last_login
+    user_agent
     verified_at
+    remember_token (nullable)
+
+user_tokens
+    id
+    user_id
+    type [email_verification, password_reset]
+    token_hash
+    expires_at
+    used_at (nullable)
+
+currencies
+    id
+    currency_code (unique)
+    symbol
+    decimal_places (default 2)
+
 stores
     id
     title
-    slug
-    custom_domain
+    slug (unique)
+    custom_domain (nullable, unique)
+    currency_id
+    timezone
+    default_locale
+    is_active
     domain_verification_token
     domain_verified_at (nullable)
+    cloudflare_turnstile_site_key (nullable)
+    cloudflare_turnstile_secret_key (nullable, encrypted)
+    contact_email (nullable)
+    contact_phone_number (nullable)
+    whatsapp (nullable)
+    store_address (nullable)
+    seo_title (nullable)
+    seo_description (nullable)
+    og_title (nullable)
+    og_description (nullable)
+    og_image_id (nullable, FK media_files)
+    jsonld_title (nullable)
+    jsonld_description (nullable)
+    jsonld_image_id (nullable, FK media_files)
+    keywords (nullable)
+    twitter (nullable)
+    facebook (nullable)
+    instagram (nullable)
+    linkedin (nullable)
+    pinterest (nullable)
+    favicon_id (nullable, FK media_files)
+    white_logo_id (nullable, FK media_files)
+    dark_logo_id (nullable, FK media_files)
+
+customers
+    id
+    store_id
+    name
+    username
+    email
+    password_hash
+    phone (nullable)
+    is_active
+    is_banned
+    ip_address
+    last_login
+    user_agent
+    verified_at
+    unique(store_id, email)
+
+customer_tokens
+    id
+    customer_id
+    type [email_verification, password_reset]
+    token_hash
+    expires_at
+    used_at (nullable)
+
+customer_addresses
+    id
+    customer_id
+    label (nullable)
+    name
+    phone (nullable)
+    address_1
+    address_2 (nullable)
+    postal_code
+    city
+    country
+    is_default_shipping (bool, default: false)
+    is_default_billing (bool, default: false)
+
 store_members
     id
     store_id
     user_id
     is_owner (bool, default: false)
     is_worker (bool, default: false)
+    unique(store_id, user_id)
+
 store_member_permissions
     id
-    store_members_id
-    resource [enum: product, blog, page, contact]
-    view (bool, default: false)
-    create (bool, default: false)
-    delete (bool, default: false)
-    update (bool, default: false)
+    store_member_id
+    resource [enum: product, brand, collection, order, customer, coupon, blog, page, contact, theme, media, settings]
+    can_view (bool, default: false)
+    can_create (bool, default: false)
+    can_update (bool, default: false)
+    can_delete (bool, default: false)
+    unique(store_member_id, resource)
+
+brands
+    id
+    store_id
+    title
+    slug
+    is_featured
+    is_active
+    sort_order
+    unique(store_id, slug)
+
 collections
     id
+    store_id
     title
     slug
     is_active
     is_featured
+    sort_order
+    unique(store_id, slug)
+
 sub_collections
     id
+    store_id
     collection_id
     title
     slug
     is_active
     is_featured
+    sort_order
+    unique(store_id, slug)
+
 products
     id
+    store_id
     title
     slug
+    brand_id (nullable)
     description
-    sort_order (default: 1)
-    is_active (bool, default: true)
-    is_featured (bool, default: false)
+    content (LARGE TEXT)
+    sort_order
+    is_digital (bool, default: false)
+    is_active
+    is_featured
+    min_order_qty (nullable, null = no limit)
+    max_order_qty (nullable, null = no limit)
+    has_warranty (bool, default: false)
+    warranty_type (nullable) [day, hour, month, year]
+    warranty_value (nullable, integer)
+    has_inventory (bool, default: false)
+    seo_title (nullable)
+    seo_description (nullable)
+    unique(store_id, slug)
+
+product_collections (pivot)
+    id
+    product_id
+    collection_id
+    sub_collection_id (nullable)
+    sort_order
+    unique(product_id, collection_id, sub_collection_id)
+
+product_variants
+    id
+    product_id
+    title
+    is_default (bool, default: false)
+    is_active
+    sort_order
+
+product_sub_variants
+    id
+    product_variant_id
+    title
+    sku (unique per store)
+    price
+    compare_at_price (nullable)
+    cost_price (nullable)
+    quantity (nullable, used when product has_inventory)
+    low_stock_threshold (nullable)
+    is_active
+    sort_order
+
+inventory_movements
+    id
+    store_id
+    product_sub_variant_id
+    change (integer, +/-)
+    reason [restock, sale, refund, adjustment, damaged]
+    order_id (nullable)
+    user_id (nullable)
+    note (nullable)
+
 product_specifications
     id
+    product_id
     title
     value
     description (nullable)
-    is_active (bool, default: true)
+    is_active
+    sort_order
+
+product_extra_fees
+    id
+    product_id
+    title
+    price
+    is_active
+
+product_reviews
+    id
+    store_id
+    product_id
+    customer_id
+    order_id (nullable, set = verified purchase)
+    stars (1-5)
+    subject
+    message
+    is_approved (bool, default: false)
+    unique(customer_id, product_id)
+
+digital_files
+    id
+    product_id
+    product_sub_variant_id (nullable)
+    media_file_id
+    download_limit (nullable)
+    expires_after_days (nullable)
+
+coupons
+    id
+    store_id
+    code
+    off_percent
+    customer_id (nullable, set = only this customer can use it)
+    is_active
+    is_featured
+    total_uses (default 0)
+    max_total_uses (nullable, null = unlimited, must not be exceeded)
+    max_uses_per_customer (default 1)
+    min_order_amount (nullable)
+    max_discount_amount (nullable)
+    starts_at (nullable)
+    expires_at (nullable)
+    unique(store_id, code)
+
+coupon_usages
+    id
+    coupon_id
+    customer_id
+    order_id
+
 media_files
     id
     store_id
-    product_id (nullable)
+    brand_id (nullable)
     collection_id (nullable)
     sub_collection_id (nullable)
-    is_primary (bool)
-    sort_order (default: 1)
+    product_id (nullable)
+    product_sub_variant_id (nullable)
+    is_primary (bool, default: false)
+    sort_order
     file_path
-payment_methods
+    disk
+    mime_type
+    size_bytes
+    width (nullable)
+    height (nullable)
+    alt_text (nullable)
+
+carts
     id
+    store_id
+    customer_id (nullable)
+    session_token (nullable)
+    coupon_id (nullable)
+    expires_at (nullable)
+
+cart_items
+    id
+    cart_id
+    product_sub_variant_id
+    quantity
+
+wishlists
+    id
+    customer_id
+    product_id
+    unique(customer_id, product_id)
+
+orders
+    id
+    store_id
+    order_number (unique per store, human-readable)
+    customer_id
+    status [payment_pending, processing, processed, in_transit, delivered, cancelled, failed, refunding, refunded]
+    payment_status [unpaid, paid, partially_refunded, refunded, failed]
+    payment_method
+    currency_id
+    subtotal
+    discount_total
+    shipping_total
+    tax_total
+    total_price_paid
+    coupon_id (nullable)
+    coupon_note (nullable)
+    coupon_off_percent (nullable)
+    customer_note (nullable)
+
+order_items
+    id
+    order_id
+    product_id (nullable, kept for reference)
+    product_sub_variant_id (nullable, kept for reference)
+    sku
+    product_title
+    variant_title
+    sub_variant_title (nullable)
+    quantity
+    unit_price
+    line_total
+    status [pending, processed, delivered, refunded, faulty_refunded]
+
+order_status_history
+    id
+    order_id
+    from_status (nullable)
+    to_status
+    user_id (nullable)
+    note (nullable)
+
+order_notes
+    id
+    store_id
+    order_id
+    user_id (who wrote it)
+    note
+    is_internal (bool, default: true)
+
+order_addresses
+    id
+    order_id
+    store_id
+    type [shipping, billing]
     name
-    is_active
-store_payment_methods
+    email
+    phone (nullable)
+    address_1
+    address_2 (nullable)
+    postal_code
+    city
+    country
+
+payments
     id
+    store_id
+    order_id
+    provider
+    transaction_id
+    status [pending, paid, failed, refunded]
+    amount
+    currency_id
+    raw_response (JSON, nullable)
+
+shipping_methods
+    id
+    store_id
     title
+    price
+    estimated_days (nullable)
+    is_active
+    sort_order
+
+shipments
+    id
+    order_id
+    shipping_method_id (nullable)
+    carrier (nullable)
+    tracking_number (nullable)
+    tracking_url (nullable)
+    shipped_at (nullable)
+    delivered_at (nullable)
+
+tax_rates
+    id
+    store_id
+    title
+    country (nullable)
+    rate_percent
+    is_active
+
+blog_categories
+    id
+    store_id
+    title
+    slug
+    is_active
+    sort_order
+    unique(store_id, slug)
+
+blog_posts
+    id
+    store_id
+    blog_category_id (nullable)
+    author_user_id
+    title
+    slug
+    excerpt (nullable)
+    content (LARGE TEXT)
+    featured_image_id (nullable, FK media_files)
+    seo_title (nullable)
+    seo_description (nullable)
+    is_active
+    is_featured
+    published_at (nullable)
+    unique(store_id, slug)
+
+contact_messages
+    id
+    store_id
+    name
+    email
+    phone (nullable)
+    subject (nullable)
+    message
+    is_read (bool, default: false)
+    ip_address
+
+pages
+    id
+    store_id
+    title
+    slug
+    content
+    seo_title (nullable)
+    seo_description (nullable)
+    is_active
+    sort_order
+    unique(store_id, slug)
+
+navigation_menus
+    id
+    store_id
+    title
+    location [header, footer, other]
+
+menu_items
+    id
+    navigation_menu_id
+    parent_id (nullable)
+    label
+    url (nullable)
+    linkable_type (nullable) [product, collection, page, blog_post]
+    linkable_id (nullable)
+    is_active
+    sort_order
+
+redirects
+    id
+    store_id
+    from_path
+    to_path
+    status_code (default 301)
+    unique(store_id, from_path)
+
+themes
+    id
+    store_id
+    title
+    content
+    default_js
+    default_css
+    is_active (only one active per store)
+
+store_logs
+    id
+    store_id
+    user_id (nullable)
+    title
+    message
+    status [success, failed, warning, info]
+    ip_address (nullable)
+    context (JSON, nullable)

@@ -15,6 +15,8 @@ use tower_http::services::ServeDir;
 pub struct AppState {
     pub db: sqlx::PgPool,
     pub jwt_secret: String,
+    pub domain: String,
+    pub store_domain: String,
 }
 
 #[tokio::main]
@@ -23,10 +25,14 @@ async fn main() -> Result<()> {
         .await
         .context("could not establish database connection pool")?;
     let jwt_secret = std::env::var("JWT_SECRET").expect("JWT_SECRET must be set");
+    let domain = std::env::var("DOMAIN").expect("DOMAIN must be set");
+    let store_domain = std::env::var("STORE_DOMAIN").expect("STORE_DOMAIN must be set");
 
     let _state = AppState {
         db: pool,
         jwt_secret,
+        domain,
+        store_domain,
     };
 
     let app = Router::new()
