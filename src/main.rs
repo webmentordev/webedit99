@@ -1,6 +1,17 @@
+mod admin;
+mod apis;
+mod assets;
 mod db;
+mod routes;
+mod system;
+mod utils;
 
+use assets::*;
 use db::*;
+use routes::admin_init::*;
+use routes::apis_init::*;
+use routes::system_init::*;
+use utils::*;
 
 use anyhow::{Context, Result};
 use std::net::SocketAddr;
@@ -28,16 +39,24 @@ async fn main() -> Result<()> {
     let domain = std::env::var("DOMAIN").expect("DOMAIN must be set");
     let store_domain = std::env::var("STORE_DOMAIN").expect("STORE_DOMAIN must be set");
 
-    let _state = AppState {
+    let state = AppState {
         db: pool,
         jwt_secret,
         domain,
         store_domain,
     };
 
+    let system = init_system_routes(state.clone()).await?;
+    let apis = init_api_routes(state.clone()).await?;
+    let admin = init_admin_routes(state.clone()).await?;
+
     let app = Router::new()
+        .nest("/admin", admin)
+        .nest("/api", apis)
+        .nest("/system", system)
         .nest_service("/uploads", ServeDir::new("uploads"))
-        .route("/health", get(health));
+        .route("/health", get(health))
+        .route("/assets/{store}/{file}", get(get_asset));
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 7780));
     let listener = tokio::net::TcpListener::bind(addr).await?;
