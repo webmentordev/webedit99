@@ -14,6 +14,8 @@ pub async fn init_system_routes(state: AppState) -> Result<Router> {
     let public = Router::new().route("/health", get(health));
 
     let protected = Router::new()
+        .route("/", get(list_my_stores).post(create_store))
+        .route("/{id}", get(get_my_store))
         .route("/{id}/verify-domain", post(verify_domain_handler))
         .route_layer(middleware::from_fn_with_state(state.clone(), require_auth));
 

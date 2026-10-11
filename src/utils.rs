@@ -64,3 +64,24 @@ pub fn slugify(name: &str, random: bool) -> String {
 
     base
 }
+
+pub fn slugify_store(title: &str) -> String {
+    let mut out = String::new();
+    let mut last_dash = true;
+    for c in title.chars() {
+        if c.is_ascii_alphanumeric() {
+            out.push(c.to_ascii_lowercase());
+            last_dash = false;
+        } else if !last_dash {
+            out.push('-');
+            last_dash = true;
+        }
+    }
+    let out: String = out.trim_matches('-').chars().take(50).collect();
+    let out = out.trim_matches('-').to_string();
+    if out.is_empty() {
+        "store".to_string()
+    } else {
+        out
+    }
+}

@@ -99,11 +99,10 @@ const route = useRoute();
 const { logout } = useLogout();
 
 const uuid = computed(() => route.params.uuid);
-const base = computed(() => `/store/${uuid.value}`);
+const base = computed(() => `/stores/${uuid.value}`);
 
 const main = computed(() => [
     { label: 'Home', to: base.value, exact: true },
-    { label: 'Stores', to: '/stores', exact: true },
     {
         label: 'Orders',
         children: [
