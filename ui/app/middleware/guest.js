@@ -5,9 +5,9 @@ export default defineNuxtRouteMiddleware(async () => {
     const user = getUser();
 
     if (token && user) {
-        if (user.is_admin == true) {
-            return await navigateTo('/admin/dashboard');
+        if (user.is_admin === true) {
+            return await navigateTo('/dashboard');
         }
-        return await navigateTo('/');
+        return await navigateTo('/stores');
     }
 });

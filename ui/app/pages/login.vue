@@ -47,8 +47,8 @@
                     </div>
 
                     <div class="mt-5 grid gap-4">
-                        <AlertsSuccess v-if="message" :text="message" />
-                        <AlertsError v-if="errors.message" :text="errors.message" />
+                        <CardsSuccess v-if="message" :text="message" />
+                        <CardsError v-if="errors.message" :text="errors.message" />
                     </div>
 
                     <p v-if="needsVerification" class="mt-4 text-sm">
@@ -97,7 +97,7 @@ async function login() {
         return;
     }
     try {
-        const data = await authFetch('/api/account/login', {
+        const data = await authFetch('/account/login', {
             method: "POST",
             body: {
                 email: email.value.trim(),
@@ -108,7 +108,7 @@ async function login() {
             setToken(data.token);
             setUser(data.user);
             if (data.user.is_admin == true) {
-                await navigateTo('/admin/dashboard');
+                await navigateTo('/stores');
             } else {
                 await navigateTo('/');
             }
@@ -118,7 +118,13 @@ async function login() {
         if (code === 'email_not_verified') {
             needsVerification.value = true;
         }
-        errors.value.message = e.statusMessage || 'Something went wrong!';
+        const messages = {
+            400: 'Invalid input.',
+            401: 'Invalid email or password.',
+            403: 'This account is disabled.',
+            429: 'Too many attempts. Try again later.'
+        };
+        errors.value.message = messages[e.status] || 'Something went wrong!';
     } finally {
         processing.value = false;
     }

@@ -48,3 +48,38 @@ CREATE INDEX idx_stores_favicon_id ON stores (favicon_id);
 CREATE INDEX idx_stores_white_logo_id ON stores (white_logo_id);
 
 CREATE INDEX idx_stores_dark_logo_id ON stores (dark_logo_id);
+
+ALTER TABLE stores DROP CONSTRAINT stores_custom_domain_key;
+
+ALTER TABLE stores DROP CONSTRAINT stores_slug_key;
+
+CREATE UNIQUE INDEX uq_stores_custom_domain ON stores (lower(custom_domain))
+WHERE
+    custom_domain IS NOT NULL;
+
+CREATE UNIQUE INDEX uq_stores_slug ON stores (lower(slug));
+
+ALTER TABLE stores
+ADD CONSTRAINT chk_stores_slug_format CHECK (
+    slug ~ '^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$'
+),
+ADD CONSTRAINT chk_stores_slug_reserved CHECK (
+    slug NOT IN (
+        'www',
+        'api',
+        'admin',
+        'system',
+        'assets',
+        'uploads',
+        'health',
+        'static',
+        'cdn',
+        'app',
+        'mail',
+        'shop'
+    )
+),
+ADD CONSTRAINT chk_stores_custom_domain_lower CHECK (
+    custom_domain IS NULL
+    OR custom_domain = lower(custom_domain)
+);

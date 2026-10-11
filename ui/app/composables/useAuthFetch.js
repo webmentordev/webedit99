@@ -1,5 +1,7 @@
 export const useAuthFetch = () => {
-    const { getToken } = useAuthToken();
+    const { getToken, removeToken } = useAuthToken();
+    const { removeUser } = useAuthUser();
+
     const authFetch = async (url, options = {}) => {
         const token = getToken();
         const isFormData = options.body instanceof FormData;
@@ -7,7 +9,7 @@ export const useAuthFetch = () => {
         const defaultOptions = {
             ...options,
             headers: {
-                'Authorization': token ? `Bearer ${token}` : '',
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
                 'Accept': 'application/json',
                 ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
                 ...options.headers
@@ -17,9 +19,8 @@ export const useAuthFetch = () => {
             const apiUrl = useRuntimeConfig().public.apiUrl;
             return await $fetch(`${apiUrl}${url}`, defaultOptions);
         } catch (error) {
-            if (error.status === 401 || error.status === 403) {
-                const { removeToken } = useAuthToken();
-                const { removeUser } = useAuthUser();
+            const isAuthEndpoint = url.startsWith('/account/');
+            if (error.status === 401 && !isAuthEndpoint) {
                 removeToken();
                 removeUser();
                 await navigateTo('/login');

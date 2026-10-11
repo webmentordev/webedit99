@@ -49,11 +49,6 @@
                             </p>
                         </div>
                     </div>
-
-                    <div class="my-5 m-auto w-fit">
-                        <NuxtTurnstile ref="turnstile" v-model="ct_token" />
-                    </div>
-
                     <button type="submit" :disabled="processing"
                         class="w-full border-2 border-black inline-block bg-pink-300 px-6 py-3 font-bold shadow-[4px_4px_0_0_#000] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-[2px_2px_0_0_#000] transition-all disabled:opacity-60 disabled:cursor-not-allowed mt-6">
                         {{ processing ? 'Processing signup request...' : 'Register &rarr;' }}
@@ -75,14 +70,14 @@
 
                     <div class="mt-5 grid gap-4">
                         <div v-if="message">
-                            <AlertsSuccess :text="message" />
+                            <CardsSuccess :text="message" />
                             <p class="mt-3 text-sm">
                                 Didn't get the email?
                                 <NuxtLink to="/verify-email" class="font-bold underline">Resend verification link
                                 </NuxtLink>
                             </p>
                         </div>
-                        <AlertsError v-if="errors.message" :text="errors.message" />
+                        <CardsError v-if="errors.message" :text="errors.message" />
                     </div>
                 </form>
             </div>
@@ -103,8 +98,6 @@ const password = ref("");
 const confirm_password = ref("");
 const processing = ref(false);
 const message = ref("");
-const ct_token = ref("");
-const turnstile = ref(null);
 const errors = ref({
     count: 0
 });
@@ -143,14 +136,13 @@ async function register() {
         return;
     }
     try {
-        const data = await authFetch('/api/account/register', {
+        const data = await authFetch('/account/register', {
             method: "POST",
             body: {
                 name: name.value.trim(),
                 email: email.value.trim(),
                 password: password.value,
-                confirm_password: confirm_password.value,
-                ct_token: ct_token.value
+                confirm_password: confirm_password.value
             }
         });
         if (data) {
@@ -165,7 +157,6 @@ async function register() {
         }
     } finally {
         processing.value = false;
-        turnstile.value?.reset();
     }
 }
 

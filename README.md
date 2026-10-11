@@ -8,6 +8,7 @@ cargo sqlx database create
 cargo sqlx migrate add <table-name>
 cargo sqlx migrate run
 cargo sqlx migrate revert
+sqlx database reset
 
 - Info command
 cargo sqlx migrate info

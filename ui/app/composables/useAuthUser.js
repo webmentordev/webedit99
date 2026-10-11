@@ -1,5 +1,5 @@
 export const useAuthUser = () => {
-    const user = useCookie('webedit_token', {
+    const user = useCookie('webedit_user', {
         maxAge: 3600 * (24 * 30),
         sameSite: 'strict',
         secure: import.meta.client ? window.location.protocol === 'https:' : true,
