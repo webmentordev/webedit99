@@ -8,6 +8,7 @@ CREATE TABLE stores (
     timezone VARCHAR(100) NOT NULL,
     default_locale VARCHAR(20) NOT NULL,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    is_banned BOOLEAN NOT NULL DEFAULT FALSE,
     domain_verification_token VARCHAR(255) NOT NULL,
     domain_verified_at TIMESTAMPTZ,
     cloudflare_turnstile_site_key VARCHAR(255),

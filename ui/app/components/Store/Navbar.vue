@@ -85,6 +85,10 @@
             <NuxtLink to="/stores" class="rounded-lg px-3 py-1.5 text-gray-700 hover:bg-gray-200">All stores</NuxtLink>
             <NuxtLink to="/status" class="rounded-lg px-3 py-1.5 text-gray-700 hover:bg-gray-200">System status
             </NuxtLink>
+            <NuxtLink v-if="user.is_admin" to="/dashboard"
+                class="rounded-lg px-3 py-1.5 text-gray-700 hover:bg-gray-200">
+                Administration
+            </NuxtLink>
             <button type="button" @click="logout"
                 class="w-full text-left rounded-lg px-3 py-1.5 font-medium text-red-700 hover:bg-red-100">
                 Log out
@@ -95,6 +99,8 @@
 
 <script setup>
 const route = useRoute();
+
+const { user } = useAuthUser();
 
 const { logout } = useLogout();
 

@@ -30,7 +30,7 @@
         </nav>
 
         <div class="border-t-4 border-black bg-yellow-50 p-3 flex flex-col gap-2">
-            <NuxtLink to="/"
+            <NuxtLink to="/stores"
                 class="border-2 border-black bg-white px-3 py-2 text-sm font-bold text-center hover:bg-yellow-100">
                 View store
             </NuxtLink>
