@@ -6,4 +6,6 @@ definePageMeta({
     middleware: 'auth',
     layout: 'store'
 });
+
+const route = useRoute().params.uuid;
 </script>

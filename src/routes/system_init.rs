@@ -2,6 +2,7 @@ use crate::AppState;
 use crate::middleware::require_auth;
 
 use crate::system::domain_routes::*;
+use crate::system::products::*;
 use crate::system::stores::*;
 
 use anyhow::Result;
@@ -16,6 +17,7 @@ pub async fn init_system_routes(state: AppState) -> Result<Router> {
     let protected = Router::new()
         .route("/", get(list_my_stores).post(create_store))
         .route("/{id}", get(get_my_store))
+        .route("/{id}/products", get(list_products).post(create_product))
         .route("/{id}/verify-domain", post(verify_domain_handler))
         .route_layer(middleware::from_fn_with_state(state.clone(), require_auth));
 
