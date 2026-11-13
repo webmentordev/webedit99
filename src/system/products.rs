@@ -9,6 +9,7 @@ use uuid::Uuid;
 use crate::AppState;
 use crate::auth::Claims;
 use crate::system::access::{Action, authorize};
+use crate::utils::slugify;
 
 const WARRANTY_TYPES: [&str; 4] = ["day", "hour", "month", "year"];
 
@@ -135,24 +136,6 @@ pub struct CreateProduct {
     pub seo_description: Option<String>,
 }
 
-fn slugify(input: &str) -> String {
-    let mut out = String::new();
-    let mut last_dash = false;
-    for c in input.chars() {
-        if c.is_alphanumeric() {
-            out.extend(c.to_lowercase());
-            last_dash = false;
-        } else if !last_dash && !out.is_empty() {
-            out.push('-');
-            last_dash = true;
-        }
-    }
-    while out.ends_with('-') {
-        out.pop();
-    }
-    out.chars().take(255).collect()
-}
-
 fn clean(value: Option<String>) -> Option<String> {
     value
         .map(|s| s.trim().to_string())
@@ -178,11 +161,11 @@ pub async fn create_product(
     }
 
     let slug = match clean(payload.slug) {
-        Some(s) => slugify(&s),
-        None => slugify(&title),
+        Some(s) => slugify(&s, false),
+        None => slugify(&title, false),
     };
 
-    if slug.is_empty() {
+    if slug.is_empty() || slug.chars().count() > 255 {
         return Err(StatusCode::BAD_REQUEST);
     }
 

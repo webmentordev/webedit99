@@ -1,9 +1,12 @@
 use crate::AppState;
 use crate::middleware::require_auth;
 
+use crate::system::brands::*;
+use crate::system::collections::*;
 use crate::system::domain_routes::*;
 use crate::system::products::*;
 use crate::system::stores::*;
+use crate::system::sub_collections::*;
 
 use anyhow::Result;
 use axum::{
@@ -18,6 +21,15 @@ pub async fn init_system_routes(state: AppState) -> Result<Router> {
         .route("/", get(list_my_stores).post(create_store))
         .route("/{id}", get(get_my_store))
         .route("/{id}/products", get(list_products).post(create_product))
+        .route("/{id}/brands", get(list_brands).post(create_brand))
+        .route(
+            "/{id}/collections",
+            get(list_collections).post(create_collection),
+        )
+        .route(
+            "/{id}/sub-collections",
+            get(list_sub_collections).post(create_sub_collection),
+        )
         .route("/{id}/verify-domain", post(verify_domain_handler))
         .route_layer(middleware::from_fn_with_state(state.clone(), require_auth));
 
