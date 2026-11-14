@@ -2,6 +2,8 @@ pub mod access;
 pub mod brands;
 pub mod collections;
 pub mod domain_routes;
+pub mod product_extra_fees;
+pub mod product_specifications;
 pub mod products;
 pub mod stores;
 pub mod sub_collections;

@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::{Extension, Json};
@@ -11,10 +13,17 @@ use crate::auth::Claims;
 use crate::system::access::{Action, authorize};
 use crate::utils::slugify;
 
-const WARRANTY_TYPES: [&str; 4] = ["day", "hour", "month", "year"];
-
 const DEFAULT_PER_PAGE: i64 = 20;
 const MAX_PER_PAGE: i64 = 100;
+const WARRANTY_TYPES: [&str; 4] = ["day", "hour", "month", "year"];
+
+#[derive(Debug, Serialize)]
+pub struct Paginated<T> {
+    pub data: Vec<T>,
+    pub page: i64,
+    pub per_page: i64,
+    pub total: i64,
+}
 
 #[derive(Debug, Deserialize)]
 pub struct ListProductsQuery {
@@ -39,12 +48,38 @@ pub struct ProductListItem {
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Serialize)]
-pub struct Paginated<T> {
-    pub data: Vec<T>,
-    pub page: i64,
-    pub per_page: i64,
-    pub total: i64,
+#[derive(Debug, Deserialize)]
+pub struct ProductCollectionInput {
+    pub collection_id: Uuid,
+    pub sub_collection_id: Option<Uuid>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CreateProduct {
+    pub title: String,
+    pub slug: Option<String>,
+    pub brand_id: Option<Uuid>,
+    pub description: Option<String>,
+    pub content: Option<String>,
+    pub sort_order: Option<i32>,
+    pub is_digital: Option<bool>,
+    pub is_active: Option<bool>,
+    pub is_featured: Option<bool>,
+    pub min_order_qty: Option<i32>,
+    pub max_order_qty: Option<i32>,
+    pub has_warranty: Option<bool>,
+    pub warranty_type: Option<String>,
+    pub warranty_value: Option<i32>,
+    pub has_inventory: Option<bool>,
+    pub seo_title: Option<String>,
+    pub seo_description: Option<String>,
+    pub collections: Option<Vec<ProductCollectionInput>>,
+}
+
+fn clean(value: Option<String>) -> Option<String> {
+    value
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
 }
 
 pub async fn list_products(
@@ -115,33 +150,6 @@ pub async fn list_products(
     }))
 }
 
-#[derive(Debug, Deserialize)]
-pub struct CreateProduct {
-    pub title: String,
-    pub slug: Option<String>,
-    pub brand_id: Option<Uuid>,
-    pub description: Option<String>,
-    pub content: Option<String>,
-    pub sort_order: Option<i32>,
-    pub is_digital: Option<bool>,
-    pub is_active: Option<bool>,
-    pub is_featured: Option<bool>,
-    pub min_order_qty: Option<i32>,
-    pub max_order_qty: Option<i32>,
-    pub has_warranty: Option<bool>,
-    pub warranty_type: Option<String>,
-    pub warranty_value: Option<i32>,
-    pub has_inventory: Option<bool>,
-    pub seo_title: Option<String>,
-    pub seo_description: Option<String>,
-}
-
-fn clean(value: Option<String>) -> Option<String> {
-    value
-        .map(|s| s.trim().to_string())
-        .filter(|s| !s.is_empty())
-}
-
 pub async fn create_product(
     State(state): State<AppState>,
     Extension(claims): Extension<Claims>,
@@ -195,6 +203,69 @@ pub async fn create_product(
         (None, None)
     };
 
+    if let Some(brand_id) = payload.brand_id {
+        let exists = sqlx::query_scalar!(
+            r#"SELECT EXISTS(
+                   SELECT 1 FROM brands
+                   WHERE id = $1 AND store_id = $2 AND deleted_at IS NULL
+               ) AS "exists!""#,
+            brand_id,
+            store_id
+        )
+        .fetch_one(&state.db)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+        if !exists {
+            return Err(StatusCode::BAD_REQUEST);
+        }
+    }
+
+    let mut seen = HashSet::new();
+    let mut links: Vec<(Uuid, Option<Uuid>)> = Vec::new();
+    for item in payload.collections.unwrap_or_default() {
+        if seen.insert((item.collection_id, item.sub_collection_id)) {
+            links.push((item.collection_id, item.sub_collection_id));
+        }
+    }
+
+    if links.len() > 50 {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    for (collection_id, sub_collection_id) in &links {
+        let valid = sqlx::query_scalar!(
+            r#"SELECT EXISTS(
+                   SELECT 1 FROM collections c
+                   WHERE c.id = $1
+                     AND c.store_id = $2
+                     AND c.deleted_at IS NULL
+                     AND ($3::uuid IS NULL OR EXISTS(
+                         SELECT 1 FROM sub_collections sc
+                         WHERE sc.id = $3
+                           AND sc.collection_id = c.id
+                           AND sc.store_id = $2
+                     ))
+               ) AS "valid!""#,
+            collection_id,
+            store_id,
+            *sub_collection_id
+        )
+        .fetch_one(&state.db)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+        if !valid {
+            return Err(StatusCode::BAD_REQUEST);
+        }
+    }
+
+    let mut tx = state
+        .db
+        .begin()
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
     let row = sqlx::query!(
         r#"INSERT INTO products
                (id, store_id, title, slug, brand_id, description, content, sort_order,
@@ -224,10 +295,30 @@ pub async fn create_product(
         clean(payload.seo_title),
         clean(payload.seo_description)
     )
-    .fetch_optional(&state.db)
+    .fetch_optional(&mut *tx)
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
     .ok_or(StatusCode::CONFLICT)?;
+
+    for (index, (collection_id, sub_collection_id)) in links.iter().enumerate() {
+        sqlx::query!(
+            r#"INSERT INTO product_collections
+                   (id, product_id, collection_id, sub_collection_id, sort_order)
+               VALUES ($1, $2, $3, $4, $5)"#,
+            Uuid::new_v4(),
+            row.id,
+            collection_id,
+            *sub_collection_id,
+            index as i32 + 1
+        )
+        .execute(&mut *tx)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    }
+
+    tx.commit()
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok((
         StatusCode::CREATED,

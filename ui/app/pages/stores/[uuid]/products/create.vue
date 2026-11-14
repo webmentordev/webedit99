@@ -91,6 +91,36 @@
             </div>
 
             <div class="rounded-xl border border-gray-300 bg-white p-4 shadow-sm">
+                <div class="mb-3 flex items-center justify-between">
+                    <h2 class="text-sm font-semibold text-gray-900">Collections</h2>
+                    <button type="button" @click="addCollectionRow"
+                        class="rounded-lg border border-gray-300 bg-white px-3 py-1 text-sm font-medium hover:bg-gray-50">
+                        Add
+                    </button>
+                </div>
+
+                <p v-if="collectionRows.length === 0" class="text-sm text-gray-500">Not in any collection.</p>
+
+                <div v-for="(row, index) in collectionRows" :key="index" class="mb-2 flex items-center gap-2">
+                    <select v-model="row.collection_id" @change="row.sub_collection_id = ''"
+                        class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400">
+                        <option value="" disabled>Select a collection</option>
+                        <option v-for="c in collections" :key="c.id" :value="c.id">{{ c.title }}</option>
+                    </select>
+                    <select v-model="row.sub_collection_id" :disabled="!row.collection_id"
+                        class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 disabled:opacity-50">
+                        <option value="">No sub collection</option>
+                        <option v-for="s in subCollectionsFor(row.collection_id)" :key="s.id" :value="s.id">{{ s.title
+                            }}</option>
+                    </select>
+                    <button type="button" @click="collectionRows.splice(index, 1)"
+                        class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50">
+                        Remove
+                    </button>
+                </div>
+            </div>
+
+            <div class="rounded-xl border border-gray-300 bg-white p-4 shadow-sm">
                 <h2 class="mb-3 text-sm font-semibold text-gray-900">SEO</h2>
 
                 <label for="seo_title" class="mb-1 block text-sm font-medium">SEO title</label>
@@ -150,10 +180,36 @@ const form = reactive({
 const saving = ref(false);
 const error = ref('');
 
+const collections = ref([]);
+const subCollections = ref([]);
+const collectionRows = ref([]);
+
+function addCollectionRow() {
+    collectionRows.value.push({ collection_id: '', sub_collection_id: '' });
+}
+
+function subCollectionsFor(collectionId) {
+    return subCollections.value.filter((s) => s.collection_id === collectionId);
+}
+
 function toInt(value) {
     if (value === '' || value === null || value === undefined) return null;
     const n = Number(value);
     return Number.isInteger(n) ? n : null;
+}
+
+async function fetchCollectionOptions() {
+    try {
+        const [c, s] = await Promise.all([
+            authFetch(`/system/stores/${uuid.value}/collections?per_page=100`, { method: 'GET' }),
+            authFetch(`/system/stores/${uuid.value}/sub-collections?per_page=100`, { method: 'GET' })
+        ]);
+        collections.value = c?.data || [];
+        subCollections.value = s?.data || [];
+    } catch (e) {
+        collections.value = [];
+        subCollections.value = [];
+    }
 }
 
 async function submit() {
@@ -180,7 +236,13 @@ async function submit() {
                 warranty_type: form.has_warranty ? form.warranty_type : null,
                 warranty_value: form.has_warranty ? toInt(form.warranty_value) : null,
                 seo_title: form.seo_title.trim() || null,
-                seo_description: form.seo_description.trim() || null
+                seo_description: form.seo_description.trim() || null,
+                collections: collectionRows.value
+                    .filter((r) => r.collection_id)
+                    .map((r) => ({
+                        collection_id: r.collection_id,
+                        sub_collection_id: r.sub_collection_id || null
+                    }))
             }
         });
 
@@ -191,6 +253,8 @@ async function submit() {
         saving.value = false;
     }
 }
+
+onMounted(fetchCollectionOptions);
 
 useHead({
     title: 'Create product - webedit99'

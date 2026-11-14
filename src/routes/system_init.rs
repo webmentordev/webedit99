@@ -4,6 +4,8 @@ use crate::middleware::require_auth;
 use crate::system::brands::*;
 use crate::system::collections::*;
 use crate::system::domain_routes::*;
+use crate::system::product_extra_fees::*;
+use crate::system::product_specifications::*;
 use crate::system::products::*;
 use crate::system::stores::*;
 use crate::system::sub_collections::*;
@@ -31,6 +33,14 @@ pub async fn init_system_routes(state: AppState) -> Result<Router> {
             get(list_sub_collections).post(create_sub_collection),
         )
         .route("/{id}/verify-domain", post(verify_domain_handler))
+        .route(
+            "/{id}/product-specifications",
+            get(list_specifications).post(create_specification),
+        )
+        .route(
+            "/{id}/product-extra-fees",
+            get(list_extra_fees).post(create_extra_fee),
+        )
         .route_layer(middleware::from_fn_with_state(state.clone(), require_auth));
 
     let store = Router::new().merge(public).merge(protected);
