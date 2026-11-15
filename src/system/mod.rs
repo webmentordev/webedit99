@@ -4,6 +4,7 @@ pub mod collections;
 pub mod domain_routes;
 pub mod product_extra_fees;
 pub mod product_specifications;
+pub mod product_sub_variants;
 pub mod products;
 pub mod stores;
 pub mod sub_collections;

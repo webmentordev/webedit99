@@ -6,6 +6,7 @@ use crate::system::collections::*;
 use crate::system::domain_routes::*;
 use crate::system::product_extra_fees::*;
 use crate::system::product_specifications::*;
+use crate::system::product_sub_variants::*;
 use crate::system::products::*;
 use crate::system::stores::*;
 use crate::system::sub_collections::*;
@@ -40,6 +41,14 @@ pub async fn init_system_routes(state: AppState) -> Result<Router> {
         .route(
             "/{id}/product-extra-fees",
             get(list_extra_fees).post(create_extra_fee),
+        )
+        .route(
+            "/{id}/product-sub-variants",
+            get(list_sub_variants).post(create_sub_variant),
+        )
+        .route(
+            "/{id}/product-sub-variants/options",
+            get(list_variant_options),
         )
         .route_layer(middleware::from_fn_with_state(state.clone(), require_auth));
 
