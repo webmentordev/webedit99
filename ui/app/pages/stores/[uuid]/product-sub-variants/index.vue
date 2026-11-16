@@ -127,10 +127,10 @@ function isLow(s) {
 
 async function fetchVariants() {
     try {
-        const data = await authFetch(`/system/stores/${uuid.value}/product-sub-variants/options`, {
+        const data = await authFetch(`/system/stores/${uuid.value}/product-variants?per_page=100`, {
             method: 'GET'
         });
-        variants.value = Array.isArray(data) ? data : [];
+        variants.value = data?.data || [];
     } catch (e) {
         variants.value = [];
     }

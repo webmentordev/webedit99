@@ -125,10 +125,10 @@ function toInt(value) {
 async function fetchVariants() {
     loadingVariants.value = true;
     try {
-        const data = await authFetch(`/system/stores/${uuid.value}/product-sub-variants/options`, {
+        const data = await authFetch(`/system/stores/${uuid.value}/product-variants?per_page=100`, {
             method: 'GET'
         });
-        variants.value = Array.isArray(data) ? data : [];
+        variants.value = data?.data || [];
     } catch (e) {
         error.value = e.statusMessage || 'Failed to load variants.';
     } finally {
