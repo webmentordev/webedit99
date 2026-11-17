@@ -3,6 +3,8 @@ use crate::middleware::require_auth;
 
 use crate::system::brands::*;
 use crate::system::collections::*;
+use crate::system::customer_addresses::*;
+use crate::system::customers::*;
 use crate::system::domain_routes::*;
 use crate::system::product_extra_fees::*;
 use crate::system::product_specifications::*;
@@ -50,6 +52,11 @@ pub async fn init_system_routes(state: AppState) -> Result<Router> {
         .route(
             "/{id}/product-extra-fees",
             get(list_extra_fees).post(create_extra_fee),
+        )
+        .route("/{id}/customers", get(list_customers).post(create_customer))
+        .route(
+            "/{id}/customer-addresses",
+            get(list_addresses).post(create_address),
         )
         .route_layer(middleware::from_fn_with_state(state.clone(), require_auth));
 
